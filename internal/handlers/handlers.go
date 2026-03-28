@@ -1,24 +1,24 @@
 package handlers
 
 import (
-	"fmt"
+	_ "embed"
 	"html/template"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Yandex-Practicum/go1fl-sprint6-final/internal/service"
 )
 
+//go:embed index.html
+var indexHTML string
+
 func FirstHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("Modul_2_Sprint_6/index.html")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = tmpl.Execute(w, nil)
+	tmpl := template.Must(template.New("index").Parse(indexHTML))
+	err := tmpl.Execute(w, nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -26,7 +26,6 @@ func FirstHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
-
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "Неверный формат формы", http.StatusBadRequest)
 		return
@@ -49,21 +48,28 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	convertedString, err := service.Service(string(contents))
+	converted, err := service.Service(string(contents))
 	if err != nil {
 		http.Error(w, "Ошибка пакета service", http.StatusInternalServerError)
 		return
 	}
 
 	ext := filepath.Ext(header.Filename)
-	fileName := time.Now().UTC().String() + ext
 
-	// Запись результата в локальный файл
-	err = os.WriteFile(fileName, []byte(convertedString), 0644)
-	if err != nil {
+	timeStr := time.Now().UTC().String()
+	timeStr = strings.Map(func(r rune) rune {
+		switch r {
+		case ' ', ':', '+':
+			return '_'
+		}
+		return r
+	}, timeStr)
+	fileName := timeStr + ext
+
+	if err := os.WriteFile(fileName, []byte(converted), 0644); err != nil {
 		http.Error(w, "Ошибка записи файла", http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Fprintf(w, "Результат: %s", convertedString)
+	w.Write([]byte(converted))
 }
