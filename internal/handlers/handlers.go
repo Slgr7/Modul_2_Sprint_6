@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"html/template"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -26,17 +27,31 @@ func FirstHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
+
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "Неверный формат формы", http.StatusBadRequest)
 		return
 	}
 
-	file, header, err := r.FormFile("file")
-	if err != nil {
+	var file multipart.File
+	var header *multipart.FileHeader
+	for _, headers := range r.MultipartForm.File {
+		if len(headers) > 0 {
+			header = headers[0]
+			var err error
+			file, err = header.Open()
+			if err != nil {
+				http.Error(w, "Ошибка открытия файла", http.StatusInternalServerError)
+				return
+			}
+			defer file.Close()
+			break
+		}
+	}
+	if file == nil {
 		http.Error(w, "Файл не передан", http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
 
 	contents, err := io.ReadAll(file)
 	if err != nil {
@@ -55,11 +70,10 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ext := filepath.Ext(header.Filename)
-
 	timeStr := time.Now().UTC().String()
+
 	timeStr = strings.Map(func(r rune) rune {
-		switch r {
-		case ' ', ':', '+':
+		if r == ' ' || r == ':' || r == '+' {
 			return '_'
 		}
 		return r

@@ -3,34 +3,29 @@ package service
 import (
 	"fmt"
 	"strings"
-	"unicode"
 
 	"github.com/Yandex-Practicum/go1fl-sprint6-final/pkg/morse"
 )
 
 func Service(input string) (string, error) {
-
-	if strings.TrimSpace(input) == "" {
+	trimmed := strings.TrimSpace(input)
+	if trimmed == "" {
 		return "", fmt.Errorf("пустая строка")
 	}
 
 	isMorse := true
-
-	runes := []rune(input)
-	for _, r := range runes {
-		if r == '.' || r == '-' || unicode.IsSpace(r) {
+	for _, r := range trimmed {
+		if r == '.' || r == '-' || r == ' ' || r == '/' {
 			continue
 		}
-
 		isMorse = false
 		break
 	}
 
-	if isMorse == true {
-		text := morse.ToText(input)
-		return text, nil
-	}
-	textmorse := morse.ToMorse(input)
-	return textmorse, nil
+	if isMorse {
 
+		return morse.ToText(trimmed), nil
+	}
+
+	return morse.ToMorse(trimmed), nil
 }
