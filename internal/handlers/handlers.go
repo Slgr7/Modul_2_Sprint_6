@@ -13,7 +13,7 @@ import (
 )
 
 func FirstHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("index.html")
+	tmpl, err := template.ParseFiles("Modul_2_Sprint_6/index.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
